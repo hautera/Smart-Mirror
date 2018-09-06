@@ -2,7 +2,7 @@
 News : False
 Weather : True
 Clock : True
-Calendar : False
+Calendar : True
 
 [SETTINGS]
 UI Locale :

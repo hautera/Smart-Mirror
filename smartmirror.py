@@ -2,6 +2,13 @@
 # requirements
 # requests, feedparser, traceback
 
+########CALENDAR IMPORTS############
+import datetime as dt
+from googleapiclient.discovery import build
+from httplib2 import Http
+from oauth2client import file, client, tools
+########################################
+
 from tkinter import *
 import locale
 import threading
@@ -33,6 +40,7 @@ XLARGE_TEXT_SIZE = 94
 LARGE_TEXT_SIZE = 48
 MEDIUM_TEXT_SIZE = 28
 SMALL_TEXT_SIZE = 18
+CALENDAR_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
 
 @contextmanager
 def setlocale(name): #thread proof function to work with locale
@@ -213,6 +221,24 @@ class Weather(Frame):
 
 
 class News(Frame):
+
+    class NewsHeadline(Frame):
+        def __init__(self, parent, event_name=""):
+            Frame.__init__(self, parent, bg='black')
+
+            image = Image.open("assets/Newspaper.png")
+            image = image.resize((25, 25), Image.ANTIALIAS)
+            image = image.convert('RGB')
+            photo = ImageTk.PhotoImage(image)
+
+            self.iconLbl = Label(self, bg='black', image=photo)
+            self.iconLbl.image = photo
+            self.iconLbl.pack(side=LEFT, anchor=N)
+
+            self.eventName = event_name
+            self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
+            self.eventNameLbl.pack(side=LEFT, anchor=N)
+
     def __init__(self, parent, *args, **kwargs):
         Frame.__init__(self, parent, *args, **kwargs)
         self.config(bg='black')
@@ -236,7 +262,7 @@ class News(Frame):
             feed = feedparser.parse(headlines_url)
 
             for post in feed.entries[0:5]:
-                headline = NewsHeadline(self.headlinesContainer, post.title)
+                headline = self.NewsHeadline(self.headlinesContainer, post.title)
                 headline.pack(side=TOP, anchor=W)
         except Exception as e:
             traceback.print_exc()
@@ -245,25 +271,15 @@ class News(Frame):
         self.after(600000, self.get_headlines)
 
 
-class NewsHeadline(Frame):
-    def __init__(self, parent, event_name=""):
-        Frame.__init__(self, parent, bg='black')
-
-        image = Image.open("assets/Newspaper.png")
-        image = image.resize((25, 25), Image.ANTIALIAS)
-        image = image.convert('RGB')
-        photo = ImageTk.PhotoImage(image)
-
-        self.iconLbl = Label(self, bg='black', image=photo)
-        self.iconLbl.image = photo
-        self.iconLbl.pack(side=LEFT, anchor=N)
-
-        self.eventName = event_name
-        self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
-        self.eventNameLbl.pack(side=LEFT, anchor=N)
-
-
 class Calendar(Frame):
+
+    class CalendarEvent(Frame):
+        def __init__(self, parent, event_name="Event 1"):
+            Frame.__init__(self, parent, bg='black')
+            self.eventName = event_name
+            self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
+            self.eventNameLbl.pack(side=TOP, anchor=E)
+
     def __init__(self, parent, *args, **kwargs):
         Frame.__init__(self, parent, bg='black')
         self.title = 'Calendar Events'
@@ -274,24 +290,25 @@ class Calendar(Frame):
         self.get_events()
 
     def get_events(self):
-        #TODO: implement this method
-        # reference https://developers.google.com/google-apps/calendar/quickstart/python
+        store = file.Storage('assets/token.json')
+        creds = store.get()
 
+        if not creds or creds.invalid:
+            flow = client.flow_from_clientsecrets('assets/credentials.json', CALENDAR_SCOPES )
+            creds = tools.run_flow(flow, store)
+        service = build( 'calendar', 'v3', http=creds.authorize(Http()))
+
+        # Call the calendar API
+        now = dt.datetime.utcnow().isoformat() + 'Z'
+        events_results = service.events().list(calendarId='primary', timeMin=now, maxResults=3, singleEvents=True, orderBy='startTime').execute()
         # remove all children
-        for widget in self.calendarEventContainer.winfo_children():
+        events = events_results.get( 'items', [] )
+
+        for widget in  self.calendarEventContainer.winfo_children():
             widget.destroy()
-
-        calendar_event = CalendarEvent(self.calendarEventContainer)
-        calendar_event.pack(side=TOP, anchor=E)
-        pass
-
-
-class CalendarEvent(Frame):
-    def __init__(self, parent, event_name="Event 1"):
-        Frame.__init__(self, parent, bg='black')
-        self.eventName = event_name
-        self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
-        self.eventNameLbl.pack(side=TOP, anchor=E)
+        for event in events:
+            calendar_event = self.CalendarEvent(self.calendarEventContainer, event["summary"])
+            calendar_event.pack(side=TOP, anchor=E)
 
 
 class FullscreenWindow:
@@ -335,6 +352,7 @@ class FullscreenWindow:
         self.state = False
         self.tk.attributes("-fullscreen", False)
         return "break"
+
 
 if __name__ == '__main__':
     w = FullscreenWindow()

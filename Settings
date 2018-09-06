@@ -1,0 +1,18 @@
+[DISPLAY OPTIONS]
+News : False
+Weather : True
+Clock : True
+Calendar : False
+
+[SETTINGS]
+UI Locale :
+# When set to True displays clock in 24-hour format
+Twenty Four Hour Clock : False
+# Date Format, commas included
+Date Format : M D, Y
+# Code of country you live in, determines news headlines and units
+Country Code : us
+Weather Api Code : 1478606db59262bed9ccb01da3bb104d
+Language : en
+Latitude : 47.606
+Longitude : 122.33

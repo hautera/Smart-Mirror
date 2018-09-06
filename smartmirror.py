@@ -1,8 +1,8 @@
 # smartmirror.py
 # requirements
-# requests, feedparser, traceback, Pillow
+# requests, feedparser, traceback
 
-from Tkinter import *
+from tkinter import *
 import locale
 import threading
 import time
@@ -10,25 +10,29 @@ import requests
 import json
 import traceback
 import feedparser
+import configparser
 
 from PIL import Image, ImageTk
 from contextlib import contextmanager
 
 LOCALE_LOCK = threading.Lock()
 
-ui_locale = '' # e.g. 'fr_FR' fro French, '' as default
-time_format = 12 # 12 or 24
-date_format = "%b %d, %Y" # check python doc for strftime() for options
-news_country_code = 'us'
-weather_api_token = '<TOKEN>' # create account at https://darksky.net/dev/
-weather_lang = 'en' # see https://darksky.net/dev/docs/forecast for full list of language parameters values
-weather_unit = 'us' # see https://darksky.net/dev/docs/forecast for full list of unit parameters values
-latitude = None # Set this if IP location lookup does not work for you (must be a string)
-longitude = None # Set this if IP location lookup does not work for you (must be a string)
-xlarge_text_size = 94
-large_text_size = 48
-medium_text_size = 28
-small_text_size = 18
+config = configparser.ConfigParser()
+config.read('Settings')
+
+ui_locale = config['SETTINGS']['UI Locale']
+time_format = 24 if  config['SETTINGS']['Twenty Four Hour Clock'] == 'True' else 12
+date_format = config['SETTINGS']['Date Format'].replace( "M", r'%b').replace("D", r'%d').replace("Y", '%y') # check python doc for strftime() for options
+news_country_code = config['SETTINGS']['Country Code']
+weather_api_token = config['SETTINGS']['Weather Api Code']
+weather_lang = config['SETTINGS']['Language']
+weather_unit = config['SETTINGS']['Country Code']
+latitude = config["SETTINGS"]["Latitude"]
+longitude = config["SETTINGS"]["Longitude"]
+XLARGE_TEXT_SIZE = 94
+LARGE_TEXT_SIZE = 48
+MEDIUM_TEXT_SIZE = 28
+SMALL_TEXT_SIZE = 18
 
 @contextmanager
 def setlocale(name): #thread proof function to work with locale
@@ -63,15 +67,15 @@ class Clock(Frame):
         Frame.__init__(self, parent, bg='black')
         # initialize time label
         self.time1 = ''
-        self.timeLbl = Label(self, font=('Helvetica', large_text_size), fg="white", bg="black")
+        self.timeLbl = Label(self, font=('Helvetica', LARGE_TEXT_SIZE), fg="white", bg="black")
         self.timeLbl.pack(side=TOP, anchor=E)
         # initialize day of week
         self.day_of_week1 = ''
-        self.dayOWLbl = Label(self, text=self.day_of_week1, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.dayOWLbl = Label(self, text=self.day_of_week1, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
         self.dayOWLbl.pack(side=TOP, anchor=E)
         # initialize date label
         self.date1 = ''
-        self.dateLbl = Label(self, text=self.date1, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.dateLbl = Label(self, text=self.date1, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
         self.dateLbl.pack(side=TOP, anchor=E)
         self.tick()
 
@@ -110,15 +114,15 @@ class Weather(Frame):
         self.icon = ''
         self.degreeFrm = Frame(self, bg="black")
         self.degreeFrm.pack(side=TOP, anchor=W)
-        self.temperatureLbl = Label(self.degreeFrm, font=('Helvetica', xlarge_text_size), fg="white", bg="black")
+        self.temperatureLbl = Label(self.degreeFrm, font=('Helvetica', XLARGE_TEXT_SIZE), fg="white", bg="black")
         self.temperatureLbl.pack(side=LEFT, anchor=N)
         self.iconLbl = Label(self.degreeFrm, bg="black")
         self.iconLbl.pack(side=LEFT, anchor=N, padx=20)
-        self.currentlyLbl = Label(self, font=('Helvetica', medium_text_size), fg="white", bg="black")
+        self.currentlyLbl = Label(self, font=('Helvetica', MEDIUM_TEXT_SIZE), fg="white", bg="black")
         self.currentlyLbl.pack(side=TOP, anchor=W)
-        self.forecastLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.forecastLbl = Label(self, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
         self.forecastLbl.pack(side=TOP, anchor=W)
-        self.locationLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.locationLbl = Label(self, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
         self.locationLbl.pack(side=TOP, anchor=W)
         self.get_weather()
 
@@ -199,7 +203,7 @@ class Weather(Frame):
                     self.locationLbl.config(text=location2)
         except Exception as e:
             traceback.print_exc()
-            print "Error: %s. Cannot get weather." % e
+            print ("Error: %s. Cannot get weather." % e)
 
         self.after(600000, self.get_weather)
 
@@ -213,7 +217,7 @@ class News(Frame):
         Frame.__init__(self, parent, *args, **kwargs)
         self.config(bg='black')
         self.title = 'News' # 'News' is more internationally generic
-        self.newsLbl = Label(self, text=self.title, font=('Helvetica', medium_text_size), fg="white", bg="black")
+        self.newsLbl = Label(self, text=self.title, font=('Helvetica', MEDIUM_TEXT_SIZE), fg="white", bg="black")
         self.newsLbl.pack(side=TOP, anchor=W)
         self.headlinesContainer = Frame(self, bg="black")
         self.headlinesContainer.pack(side=TOP)
@@ -236,7 +240,7 @@ class News(Frame):
                 headline.pack(side=TOP, anchor=W)
         except Exception as e:
             traceback.print_exc()
-            print "Error: %s. Cannot get news." % e
+            print ("Error: %s. Cannot get news." % e)
 
         self.after(600000, self.get_headlines)
 
@@ -255,7 +259,7 @@ class NewsHeadline(Frame):
         self.iconLbl.pack(side=LEFT, anchor=N)
 
         self.eventName = event_name
-        self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
         self.eventNameLbl.pack(side=LEFT, anchor=N)
 
 
@@ -263,7 +267,7 @@ class Calendar(Frame):
     def __init__(self, parent, *args, **kwargs):
         Frame.__init__(self, parent, bg='black')
         self.title = 'Calendar Events'
-        self.calendarLbl = Label(self, text=self.title, font=('Helvetica', medium_text_size), fg="white", bg="black")
+        self.calendarLbl = Label(self, text=self.title, font=('Helvetica', MEDIUM_TEXT_SIZE), fg="white", bg="black")
         self.calendarLbl.pack(side=TOP, anchor=E)
         self.calendarEventContainer = Frame(self, bg='black')
         self.calendarEventContainer.pack(side=TOP, anchor=E)
@@ -286,7 +290,7 @@ class CalendarEvent(Frame):
     def __init__(self, parent, event_name="Event 1"):
         Frame.__init__(self, parent, bg='black')
         self.eventName = event_name
-        self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
         self.eventNameLbl.pack(side=TOP, anchor=E)
 
 
@@ -303,17 +307,24 @@ class FullscreenWindow:
         self.tk.bind("<Return>", self.toggle_fullscreen)
         self.tk.bind("<Escape>", self.end_fullscreen)
         # clock
-        self.clock = Clock(self.topFrame)
-        self.clock.pack(side=RIGHT, anchor=N, padx=100, pady=60)
+        if config["DISPLAY OPTIONS"]["Clock"] == 'True':
+            self.clock = Clock(self.topFrame)
+            self.clock.pack(side=RIGHT, anchor=N, padx=100, pady=60)
+
         # weather
-        self.weather = Weather(self.topFrame)
-        self.weather.pack(side=LEFT, anchor=N, padx=100, pady=60)
-        # news
-        self.news = News(self.bottomFrame)
-        self.news.pack(side=LEFT, anchor=S, padx=100, pady=60)
+        if config["DISPLAY OPTIONS"]["Weather"] == 'True':
+            self.weather = Weather(self.topFrame)
+            self.weather.pack(side=LEFT, anchor=N, padx=100, pady=60)
+
+        # news ( I don't like the news )
+        if config["DISPLAY OPTIONS"]["News"] == "True":
+            self.news = News(self.bottomFrame)
+            self.news.pack(side=LEFT, anchor=S, padx=100, pady=60)
+
         # calender - removing for now
-        # self.calender = Calendar(self.bottomFrame)
-        # self.calender.pack(side = RIGHT, anchor=S, padx=100, pady=60)
+        if config["DISPLAY OPTIONS"]["Calendar"] == "True":
+            self.calender = Calendar(self.bottomFrame)
+            self.calender.pack(side = RIGHT, anchor=S, padx=100, pady=60)
 
     def toggle_fullscreen(self, event=None):
         self.state = not self.state  # Just toggling the boolean

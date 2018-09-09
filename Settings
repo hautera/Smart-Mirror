@@ -12,7 +12,8 @@ Twenty Four Hour Clock : False
 Date Format : M D, Y
 # Code of country you live in, determines news headlines and units
 Country Code : us
-Weather Api Code : 1478606db59262bed9ccb01da3bb104d
+Weather Api Code : aa601ec72b76ae250d3ce2e021b68d09
+IP Locater Api Code : 5980d60fdfc307b3debdb2d8c755340b
 Language : en
 Latitude : 47.606
 Longitude : 122.33

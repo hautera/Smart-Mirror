@@ -3,6 +3,7 @@ News : False
 Weather : True
 Clock : True
 Calendar : True
+Sleep After : 1
 
 [SETTINGS]
 UI Locale :

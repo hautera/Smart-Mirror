@@ -4,6 +4,8 @@ import configparser
 import PIL.Image
 import PIL.ImageTk
 from tkinter import *
+import asyncio
+from Requests import Request
 
 
 config = configparser.ConfigParser()
@@ -93,13 +95,14 @@ class Weather(Frame):
         self.currentlyLbl = Label(self, font=('Helvetica', MEDIUM_TEXT_SIZE), fg="white", bg="black")
         self.currentlyLbl.pack(side=TOP, anchor=W)
 
-        self.forecastLbl = Label(self, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
+        self.forecastLbl = Label(self, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black", justify=LEFT, wraplength=200)
         self.forecastLbl.pack(side=TOP, anchor=W)
 
         self.locationLbl = Label(self, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
         self.locationLbl.pack(side=TOP, anchor=W)
 
-    def update(self, weather_obj):
+    async def update( self ):
+        weather_obj = await Request.get_weather_data()
         degree_sign= u'\N{DEGREE SIGN}'
         temperature = "%s%s" % (str(int(weather_obj['currently']['temperature'])), degree_sign)
 
@@ -193,7 +196,8 @@ class News(Frame):
         self.headlinesContainer.pack(side=TOP)
 
 
-    def update(self, feed):
+    async def update(self):
+        feed = await Request.get_news_feed()
         for widget in self.headlinesContainer.winfo_children():
             widget.destroy()
 
@@ -202,7 +206,7 @@ class News(Frame):
             headline.pack(side=TOP, anchor=W)
 
 class Calendar(Frame):
-    # TODO: Date/ time of event
+
     class CalendarEvent(Frame):
         def __init__(self, parent, event_name, event_start_date):
             Frame.__init__(self, parent, bg='black')
@@ -214,20 +218,19 @@ class Calendar(Frame):
             else:
                 date = dt.datetime.strptime(event_start_date['date'], GOOGLE_DATE_FORMAT)
 
-            self.eventNameLbl = Label(self, text=event_name, font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
-            self.eventDateLbl = Label( self, text=date.strftime(dt_format), font=('Helvetica', SMALL_TEXT_SIZE), fg='white', bg='black')
+            self.eventNameLbl = Label(self, text=event_name +": "+date.strftime(dt_format), font=('Helvetica', SMALL_TEXT_SIZE), fg="white", bg="black")
 
             self.eventNameLbl.pack(side=TOP, anchor=E)
-            self.eventDateLbl.pack(side=TOP, anchor=E)
 
     def __init__(self, parent, *args, **kwargs):
         Frame.__init__(self, parent, bg='black')
-        self.calendarLbl = Label(self, text='Calendar Events', font=('Helvetica', MEDIUM_TEXT_SIZE), fg="white", bg="black")
+        self.calendarLbl = Label(self, text='Upcoming Schedule', font=('Helvetica', MEDIUM_TEXT_SIZE), fg="white", bg="black")
         self.calendarLbl.pack(side=TOP, anchor=E)
         self.calendarEventContainer = Frame(self, bg='black')
         self.calendarEventContainer.pack(side=TOP, anchor=E)
 
-    def update(self, events):
+    async def update(self):
+        events = await Request.get_calendar_data()
         for widget in  self.calendarEventContainer.winfo_children():
             widget.destroy()
 
@@ -247,21 +250,24 @@ class FullscreenWindow:
         self.bottomFrame.pack(side = BOTTOM, fill=BOTH, expand = YES)
 
         self.is_full_screen = False
+
         self.tk.bind("<Return>", self.toggle_fullscreen)
         self.tk.bind("<Escape>", self.end_fullscreen)
         self.tk.bind('s', self.show_widgets)
         self.tk.bind('h', self.hide_widgets)
+
         self.widgets_exist = {}
         self.widgets = {}
-        # clock
-        self.widgets_exist['clock'] = config['DISPLAY OPTIONS']['Clock'] == 'True'
-        if self.widgets_exist['clock']:
-            self.widgets['clock'] = Clock(self.topFrame)
 
         # weather
         self.widgets_exist['weather'] = config["DISPLAY OPTIONS"]["Weather"] == 'True'
         if self.widgets_exist['weather'] :
             self.widgets['weather'] = Weather(self.topFrame)
+
+        # clock
+        self.widgets_exist['clock'] = config['DISPLAY OPTIONS']['Clock'] == 'True'
+        if self.widgets_exist['clock']:
+            self.widgets['clock'] = Clock(self.topFrame)
 
         # news ( I don't like the news )
         self.widgets_exist['news'] = config["DISPLAY OPTIONS"]["News"] == "True"
@@ -287,25 +293,28 @@ class FullscreenWindow:
         return "break"
 
     def hide_widgets(self, event=None):
-        for widget in self.widgets:
+        for widget in self.widgets.values():
             widget.pack_forget()
 
     def show_widgets(self, event=None):
-        for widget in self.widgets:
+        for widget in self.widgets.values():
             widget.pack(side = LEFT, anchor=S, padx=100, pady=60)
 
-    def update_clock(self):
+    async def update_clock(self):
         if self.widgets_exist['clock']:
             self.widgets['clock'].update()
 
-    def update_news( self, feed ):
+    async def update_news( self ):
         if self.widgets_exist['news']:
-            self.widgets['news'].update( feed )
+            return await self.widgets['news'].update()
 
-    def update_weather( self, data ):
+    async def update_weather( self ):
         if self.widgets_exist['weather']:
-            self.widgets['weather'].update( data )
+            return await self.widgets['weather'].update( )
 
-    def update_calendar( self, data):
+    async def update_calendar(self):
         if self.widgets_exist['calendar']:
-            self.widgets['calendar'].update( data )
+            return await self.widgets['calendar'].update()
+
+    def quit( self ):
+        self.tk.destroy()

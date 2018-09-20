@@ -27,41 +27,42 @@ def main():
 
 class Request:
 
-    async def get( self, url ):
+    async def get( url ):
         async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=False)) as session:
             async with session.get( url ) as response:
                 return await response.text()
 
-    async def get_weather_data(self):
-        location_data = await self.get_location_data()
+    async def get_weather_data():
+        location_data = await Request.get_location_data()
         weather_req_url = "https://api.darksky.net/forecast/%s/%s,%s?lang=%s&units=%s" % (weather_api_token, location_data['latitude'], location_data['longitude'], weather_lang, weather_unit)
 
-        return json.loads( await self.get( weather_req_url ))
+        return json.loads( await Request.get( weather_req_url ))
 
-    async def get_location_data(self):
-        location_req_url = "http://api.ipstack.com/%s?access_key=%s&output=json" % (await self.get_ip(), ip_api_token )
-        r = await self.get(location_req_url)
+    async def get_location_data():
+        location_req_url = "http://api.ipstack.com/%s?access_key=%s&output=json" % (await Request.get_ip(), ip_api_token )
+        r = await Request.get(location_req_url)
         return json.loads(r)
 
-    async def get_ip(self):
+    async def get_ip():
         ip_url = "http://jsonip.com/"
-        req = await self.get(ip_url)
+        req = await Request.get(ip_url)
         ip_json = json.loads(req)
         return ip_json['ip']
 
-    async def get_news_feed( self ):
-        feed = await self.get("https://news.google.com/news/rss" )#% config['SETTINGS']['Country Code'])
+    async def get_news_feed():
+        feed = await Request.get("https://news.google.com/news/rss" )#% config['SETTINGS']['Country Code'])
         return feedparser.parse( feed )
 
-    async def get_calendar_data( self ):
+    async def get_calendar_data():
+        SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
+
         store = file.Storage('assets/token.json')
         creds = store.get()
 
         if not creds or creds.invalid:
-            flow = client.flow_from_clientsecrets('assets/credentials.json', CALENDAR_SCOPES )
+            flow = client.flow_from_clientsecrets('assets/credentials.json', SCOPES )
             creds = tools.run_flow(flow, store)
         service = build( 'calendar', 'v3', http=creds.authorize(Http()))
-
         # Call the calendar API
         now = dt.datetime.utcnow().isoformat() + 'Z'
         events_results = service.events().list(calendarId='primary', timeMin=now, maxResults=3, singleEvents=True, orderBy='startTime').execute()
